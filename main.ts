@@ -46,6 +46,17 @@ const STATUS_MAP: { [key: string]: TodoStatus } = {
 	"*": TodoStatus.STAR,
 };
 
+/** Map of status to order */
+const STATUS_ORDER_MAP = {
+	[TodoStatus.IMPORTANT]: 1,
+	[TodoStatus.STAR]: 2,
+	[TodoStatus.QUESTION]: 3,
+	[TodoStatus.IN_PROGRESS]: 4,
+	[TodoStatus.UNCHECKED]: 5,
+	[TodoStatus.DONE]: 6,
+	[TodoStatus.CANCELLED]: 7,
+} as const;
+
 class TodoData {
 	todoLists: TodoList[];
 
@@ -53,8 +64,11 @@ class TodoData {
 		this.todoLists = [];
 	}
 
-	getSorted(): TodoList[] {
-		return this.todoLists; // TODO: sorting
+	sortLists(): TodoList[] {
+		this.todoLists.forEach((list) => {
+			list.sort();
+		});
+		return this.todoLists;
 	}
 
 	parseNote(markdown: string): void {
@@ -140,7 +154,36 @@ class TodoList {
 		this.items = [];
 	}
 
-	sort() {}
+	sort(): TodoItem[] {
+		this.sortTodoItems(this.items);
+		return this.items;
+	}
+
+	private sortTodoItems(items: TodoItem[]): void {
+		if (items.length > 1) {
+			items.sort((a, b) => {
+				const aOrder =
+					a.status !== null
+						? STATUS_ORDER_MAP[a.status]
+						: Number.MAX_SAFE_INTEGER;
+
+				const bOrder =
+					b.status !== null
+						? STATUS_ORDER_MAP[b.status]
+						: Number.MAX_SAFE_INTEGER;
+
+				if (aOrder !== bOrder) {
+					return aOrder - bOrder;
+				}
+
+				return a.text.localeCompare(b.text);
+			});
+		}
+
+		items.forEach((item) => {
+			this.sortTodoItems(item.children);
+		});
+	}
 }
 
 class TodoItem {
@@ -177,6 +220,7 @@ export default class TodoSortPlugin extends Plugin {
 			editorCallback: (editor: Editor, _view: MarkdownView) => {
 				const todoData = new TodoData();
 				todoData.parseNote(editor.getValue());
+				console.log(todoData.sortLists());
 			},
 		});
 
