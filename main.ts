@@ -1,6 +1,7 @@
 import {
 	App,
 	Editor,
+	EditorPosition,
 	MarkdownView,
 	Plugin,
 	PluginSettingTab,
@@ -73,15 +74,61 @@ class TodoData {
 
 	parseNote(markdown: string): void {
 		this.todoLists = [];
+		const lines = markdown.split("\n");
 
 		const sections = this.splitMarkdownIntoSections(markdown);
 
+		let currentLine = 0;
 		sections.forEach((section) => {
+			const sectionLines = section.split("\n");
+			const sectionStartLine = currentLine;
 			const list = this.parseSingleList(section);
+
+			// Track line start and end
 			if (list.items.length > 0) {
+				// Find the actual start and end lines for this list
+				const listStartLine = this.findListStartLine(
+					lines,
+					sectionStartLine,
+					sectionLines,
+				);
+				const listEndLine =
+					listStartLine + this.calculateListLineCount(list);
+
+				list.lineStart = listStartLine;
+				list.lineEnd = listEndLine;
 				this.todoLists.push(list);
 			}
+
+			// Update current line to continue searching
+			currentLine = sectionStartLine + sectionLines.length;
 		});
+	}
+
+	private calculateListLineCount(list: TodoList): number {
+		return this.calculateItemsLineCount(list.items);
+	}
+
+	private calculateItemsLineCount(items: TodoItem[]): number {
+		return items.reduce((count, item) => {
+			count++;
+			count += this.calculateItemsLineCount(item.children);
+			return count;
+		}, 0);
+	}
+
+	private findListStartLine(
+		allLines: string[],
+		sectionStartLine: number,
+		sectionLines: string[],
+	): number {
+		for (let i = 0; i < sectionLines.length; i++) {
+			const line = sectionLines[i];
+			if (this.parseLine(line) !== null) {
+				return sectionStartLine + i;
+			}
+		}
+		return sectionStartLine;
 	}
 
 	private parseSingleList(markdown: string): TodoList {
@@ -124,8 +171,8 @@ class TodoData {
 
 		// choose the strategy with more potential sections
 		return headerSplitSections.length > emptySections.length
-			? headerSplitSections.filter((section) => section.trim())
-			: emptySections.filter((section) => section.trim());
+			? headerSplitSections.filter((section) => section)
+			: emptySections.filter((section) => section);
 	}
 
 	/** Parses the markdown line returning `TodoItem` if parsed, otherwise returns `null`. */
@@ -149,14 +196,26 @@ class TodoData {
 
 class TodoList {
 	items: TodoItem[];
+	lineStart: number;
+	lineEnd: number;
 
-	constructor() {
+	constructor(start = -1, end = -1) {
 		this.items = [];
+		this.lineStart = start;
+		this.lineEnd = end;
 	}
 
 	sort(): TodoItem[] {
 		this.sortTodoItems(this.items);
 		return this.items;
+	}
+
+	toReplacement(): [string, EditorPosition, EditorPosition] {
+		return [
+			this.items.reduce((acc, curr) => (acc += curr.toMarkdown()), ""),
+			{ line: this.lineStart, ch: 0 },
+			{ line: this.lineEnd, ch: 0 },
+		];
 	}
 
 	private sortTodoItems(items: TodoItem[]): void {
@@ -206,6 +265,21 @@ class TodoItem {
 		this.children = [];
 		this.depth = depth;
 	}
+
+	toMarkdown(): string {
+		return this.getItemMarkdown(this);
+	}
+
+	private getItemMarkdown(item: TodoItem): string {
+		const selfMarkdown = `${"\t".repeat(item.depth)}- [${item.statusChar}] ${item.text}\n`;
+
+		const childrenMarkdown = item.children.reduce(
+			(acc, curr) => (acc += this.getItemMarkdown(curr)),
+			"",
+		);
+
+		return selfMarkdown + childrenMarkdown;
+	}
 }
 
 export default class TodoSortPlugin extends Plugin {
@@ -220,7 +294,11 @@ export default class TodoSortPlugin extends Plugin {
 			editorCallback: (editor: Editor, _view: MarkdownView) => {
 				const todoData = new TodoData();
 				todoData.parseNote(editor.getValue());
-				console.log(todoData.sortLists());
+
+				const sorted = todoData.sortLists();
+				sorted.forEach((list) => {
+					editor.replaceRange(...list.toReplacement());
+				});
 			},
 		});
 
