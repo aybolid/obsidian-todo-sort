@@ -7,10 +7,13 @@ import {
 	Setting,
 } from "obsidian";
 
+const TODO_ITEM_REGEX = /^(\s*)([-*]\s*\[(.)\])\s*(.*)$/;
+
 interface TodoSortSettings {
 	mySetting: string;
 }
 
+/** Supported todo completion statuses. */
 enum TodoStatus {
 	/** `- [ ]` */
 	UNCHECKED,
@@ -32,6 +35,7 @@ const DEFAULT_SETTINGS: TodoSortSettings = {
 	mySetting: "default",
 };
 
+/** Status character -> `TodoStatus`. */
 const STATUS_MAP: { [key: string]: TodoStatus } = {
 	" ": TodoStatus.UNCHECKED,
 	x: TodoStatus.DONE,
@@ -43,49 +47,89 @@ const STATUS_MAP: { [key: string]: TodoStatus } = {
 };
 
 class TodoData {
-	todo_lists: TodoList[];
+	todoLists: TodoList[];
 
 	constructor() {
-		this.todo_lists = [];
+		this.todoLists = [];
 	}
 
-	get_sorted() {}
+	getSorted(): TodoList[] {
+		return this.todoLists; // TODO: sorting
+	}
 
-	parse_note(markdown: string) {
-		const list = new TodoList();
+	parseNote(markdown: string): void {
+		this.todoLists = [];
+
+		const sections = this.splitMarkdownIntoSections(markdown);
+
+		sections.forEach((section) => {
+			const list = this.parseSingleList(section);
+			if (list.items.length > 0) {
+				this.todoLists.push(list);
+			}
+		});
+	}
+
+	private parseSingleList(markdown: string): TodoList {
 		const lines = markdown.split("\n");
+
+		const list = new TodoList();
 		const stack: TodoItem[] = [];
 
 		lines.forEach((line) => {
-			const match = line.match(/^(\s*)([-*]\s*\[(.)\])\s*(.*)$/);
-			if (match) {
-				const [, indent, , statusChar, text] = match;
+			const parsed = this.parseLine(line);
+			if (parsed === null) return;
 
-				const status =
-					STATUS_MAP[statusChar.toLowerCase()] ??
-					TodoStatus.UNCHECKED;
-
-				const depth = indent.length;
-				const item = new TodoItem(text, status, depth);
-
-				while (
-					stack.length > 0 &&
-					stack[stack.length - 1].depth >= depth
-				) {
-					stack.pop();
-				}
-
-				if (stack.length > 0) {
-					stack[stack.length - 1].children.push(item);
-				} else {
-					list.items.push(item);
-				}
-
-				stack.push(item);
+			while (
+				stack.length > 0 &&
+				stack[stack.length - 1].depth >= parsed.depth
+			) {
+				stack.pop();
 			}
+
+			if (stack.length > 0) {
+				stack[stack.length - 1].children.push(parsed);
+			} else {
+				list.items.push(parsed);
+			}
+
+			stack.push(parsed);
 		});
 
-		console.log(list);
+		return list;
+	}
+
+	private splitMarkdownIntoSections(markdown: string): string[] {
+		// TODO: improve splitting into sections???
+
+		// split by headers
+		const headerSplitSections = markdown.split(/\n(#{1,6}\s+.*)\n/);
+
+		// split by multiple consecutive empty lines
+		const emptySections = markdown.split(/\n\s*\n\s*\n/);
+
+		// choose the strategy with more potential sections
+		return headerSplitSections.length > emptySections.length
+			? headerSplitSections.filter((section) => section.trim())
+			: emptySections.filter((section) => section.trim());
+	}
+
+	/** Parses the markdown line returning `TodoItem` if parsed, otherwise returns `null`. */
+	private parseLine(line: string): TodoItem | null {
+		const match = line.match(TODO_ITEM_REGEX);
+		if (!match) return null;
+
+		const [, indent, , statusChar, text] = match;
+
+		const depth = indent.length;
+		const item = new TodoItem(
+			text,
+			STATUS_MAP[statusChar.toLowerCase()] ?? null,
+			statusChar,
+			depth,
+		);
+
+		return item;
 	}
 }
 
@@ -101,13 +145,21 @@ class TodoList {
 
 class TodoItem {
 	text: string;
-	status: TodoStatus;
+	/** `null` if unsupported status character was found */
+	status: TodoStatus | null;
+	statusChar: string;
 	children: TodoItem[];
 	depth: number;
 
-	constructor(text: string, status: TodoStatus, depth = 0) {
+	constructor(
+		text: string,
+		status: TodoStatus | null,
+		statusChar: string,
+		depth = 0,
+	) {
 		this.text = text.trim();
 		this.status = status;
+		this.statusChar = statusChar;
 		this.children = [];
 		this.depth = depth;
 	}
@@ -120,11 +172,11 @@ export default class TodoSortPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.addCommand({
-			id: "sample-editor-command",
-			name: "Sample editor command",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			id: "todo-sort-sort-todos",
+			name: "Sort in the current note",
+			editorCallback: (editor: Editor, _view: MarkdownView) => {
 				const todoData = new TodoData();
-				todoData.parse_note(editor.getValue());
+				todoData.parseNote(editor.getValue());
 			},
 		});
 
