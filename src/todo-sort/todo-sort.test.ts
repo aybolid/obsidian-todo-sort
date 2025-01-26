@@ -42,11 +42,17 @@ test("nested sorting", () => {
 		"- [!] c\n",
 		"\t- [-] c1\n",
 		"\t- [/] c2\n",
+		"\t\t- [/] c21\n",
+		"\t\t- [-] c22\n",
+		"\t\t- [ ] c23\n",
 	].join("");
 
 	const output = [
 		"- [!] c\n",
 		"\t- [/] c2\n",
+		"\t\t- [/] c21\n",
+		"\t\t- [ ] c23\n",
+		"\t\t- [-] c22\n",
 		"\t- [-] c1\n",
 		"- [ ] a\n",
 		"\t- [!] a2\n",
@@ -57,7 +63,7 @@ test("nested sorting", () => {
 	const expectedReplacement: Replacement = [
 		output,
 		{ line: 2, ch: 0 },
-		{ line: 9, ch: 0 },
+		{ line: 12, ch: 0 },
 	];
 
 	expect(getReplacement(input)).toStrictEqual([expectedReplacement]);
@@ -106,7 +112,7 @@ test("separated lists sorting", () => {
 		"- [ ] a\n",
 		"\t- [x] a1\n",
 		"\t- [!] a2\n", // list 5
-		"---",
+		"---\n",
 		"- [ ] a\n",
 		"\t- [x] a1\n",
 		"\t- [!] a2\n",

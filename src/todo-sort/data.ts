@@ -1,4 +1,4 @@
-import { SECTION_SPLIT_REGEX, STATUS_MAP, TODO_ITEM_REGEX } from "src/consts";
+import { STATUS_MAP, TODO_ITEM_REGEX } from "src/consts";
 import { TodoItem } from "./item";
 import { TodoList } from "./list";
 
@@ -16,20 +16,43 @@ export class TodoData {
 
 	parseNote(markdown: string): void {
 		this.todoLists = [];
-		const lines = markdown.split("\n");
+		const sections = this.parseTodoListSections(markdown);
 
-		const sections = this.splitMarkdownIntoSections(markdown);
-		let currentLine = 0;
-
-		sections.forEach((section) => {
-			const list = this.parseSingleList(section, currentLine);
+		sections.forEach(({ startLine, markdown }) => {
+			const list = this.parseSingleList(markdown, startLine);
 
 			if (list.items.length > 0) {
 				this.todoLists.push(list);
 			}
-
-			currentLine += section.split("\n").length;
 		});
+	}
+
+	private parseTodoListSections(
+		markdown: string,
+	): { startLine: number; markdown: string }[] {
+		const sections: { startLine: number; markdown: string }[] = [];
+
+		const lines = markdown.split("\n");
+
+		let currentSection: { startLine: number; markdown: string } | null =
+			null;
+		lines.forEach((line, idx) => {
+			if (line.match(TODO_ITEM_REGEX) == null) {
+				if (currentSection !== null) {
+					sections.push(currentSection);
+					currentSection = null;
+				}
+				return;
+			}
+
+			if (currentSection === null) {
+				currentSection = { startLine: idx, markdown: "" };
+			}
+
+			currentSection.markdown += line + "\n";
+		});
+
+		return sections;
 	}
 
 	private parseSingleList(
@@ -43,6 +66,7 @@ export class TodoData {
 		lines.forEach((line, idx) => {
 			const parsed = this.parseLine(line);
 			if (parsed === null) return;
+
 			if (list.lineStart === -1) {
 				list.lineStart = sectionStartLine + idx;
 			}
@@ -64,13 +88,6 @@ export class TodoData {
 		});
 
 		return list;
-	}
-
-	private splitMarkdownIntoSections(markdown: string): string[] {
-		// split by headers or multiple consecutive empty lines
-		return markdown
-			.split(SECTION_SPLIT_REGEX)
-			.filter((section) => section.trim());
 	}
 
 	private parseLine(line: string): TodoItem | null {
