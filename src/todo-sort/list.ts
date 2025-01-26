@@ -1,5 +1,6 @@
 import { EditorPosition } from "obsidian";
 import { TodoItem } from "./item";
+import { Config } from "./sorter";
 
 export class TodoList {
 	items: TodoItem[];
@@ -10,8 +11,8 @@ export class TodoList {
 		this.items = [];
 	}
 
-	sort(sortOrder: { [statusChar: string]: number }): TodoItem[] {
-		this.sortTodoItems(this.items, sortOrder);
+	sort(config: Config): TodoItem[] {
+		this.sortTodoItems(this.items, config);
 		return this.items;
 	}
 
@@ -29,16 +30,15 @@ export class TodoList {
 		];
 	}
 
-	private sortTodoItems(
-		items: TodoItem[],
-		sortOrder: { [statusChar: string]: number },
-	): void {
+	private sortTodoItems(items: TodoItem[], config: Config): void {
 		if (items.length > 1) {
 			items.sort((a, b) => {
 				const aOrder =
-					sortOrder[a.statusChar] ?? Number.MAX_SAFE_INTEGER;
+					config.order[a.statusChar] ?? Number.MAX_SAFE_INTEGER;
 				const bOrder =
-					sortOrder[b.statusChar] ?? Number.MAX_SAFE_INTEGER;
+					config.order[b.statusChar] ?? Number.MAX_SAFE_INTEGER;
+
+				if (!config.useAlphabeticalSortForTies) return aOrder - bOrder;
 
 				if (aOrder !== bOrder) {
 					return aOrder - bOrder;
@@ -48,6 +48,6 @@ export class TodoList {
 			});
 		}
 
-		items.forEach((item) => this.sortTodoItems(item.children, sortOrder));
+		items.forEach((item) => this.sortTodoItems(item.children, config));
 	}
 }

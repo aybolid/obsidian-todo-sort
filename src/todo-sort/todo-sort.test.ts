@@ -1,21 +1,23 @@
 import { EditorPosition } from "obsidian";
-import { expect, test } from "vitest";
-import { TodoData } from "./data";
+import { expect, test, describe, it } from "vitest";
+import { Config, TodoSorter } from "./sorter";
+
+const DEFAULT_SORT_ORDER = "*,!,?,/,,x,-";
 
 type Replacement = [string, EditorPosition, EditorPosition];
 
-const getReplacement = (markdown: string): Replacement[] => {
-	const data = new TodoData();
-	data.parseNote(markdown);
-	const sorted = data.sortLists({
-		"*": 0,
-		"!": 1,
-		"?": 2,
-		"/": 3,
-		" ": 4,
-		x: 5,
-		"-": 6,
-	});
+const getReplacement = (
+	markdown: string,
+	configOverride?: Config,
+): Replacement[] => {
+	const sorter = new TodoSorter(
+		configOverride ?? {
+			order: TodoSorter.parseSortString(DEFAULT_SORT_ORDER),
+			useAlphabeticalSortForTies: true,
+		},
+	);
+	sorter.parseNote(markdown);
+	const sorted = sorter.sortLists();
 	return sorted.map((s) => s.toReplacement());
 };
 
@@ -37,6 +39,56 @@ test("basic sorting", () => {
 	];
 
 	expect(getReplacement(input)).toStrictEqual([expectedReplacement]);
+});
+
+test("custom order sorting", () => {
+	const input = [
+		"### Hello World\n",
+		"\n",
+		"- [!] a\n",
+		"- [ ] b\n",
+		"- [-] c\n",
+	].join("");
+
+	const output = ["- [-] c\n", "- [ ] b\n", "- [!] a\n"].join("");
+
+	const expectedReplacement: Replacement = [
+		output,
+		{ line: 2, ch: 0 },
+		{ line: 5, ch: 0 },
+	];
+
+	expect(
+		getReplacement(input, {
+			order: TodoSorter.parseSortString("-,,!"),
+			useAlphabeticalSortForTies: true,
+		}),
+	).toStrictEqual([expectedReplacement]);
+});
+
+test("sorting without alphabetical sort for ties", () => {
+	const input = [
+		"### Hello World\n",
+		"\n",
+		"- [ ] b\n",
+		"- [ ] c\n",
+		"- [ ] a\n",
+	].join("");
+
+	const output = ["- [ ] b\n", "- [ ] c\n", "- [ ] a\n"].join("");
+
+	const expectedReplacement: Replacement = [
+		output,
+		{ line: 2, ch: 0 },
+		{ line: 5, ch: 0 },
+	];
+
+	expect(
+		getReplacement(input, {
+			order: TodoSorter.parseSortString("!,,-"),
+			useAlphabeticalSortForTies: false,
+		}),
+	).toStrictEqual([expectedReplacement]);
 });
 
 test("nested sorting", () => {
@@ -195,4 +247,26 @@ test("sorting with nested content", () => {
 	];
 
 	expect(getReplacement(input)).toStrictEqual([expectedReplacement]);
+});
+
+describe("parseSortString", () => {
+	it("parses standard comma-separated string", () => {
+		const result = TodoSorter.parseSortString("a,b,c");
+		expect(result).toEqual({ a: 0, b: 1, c: 2 });
+	});
+
+	it("handles empty strings as space", () => {
+		const result = TodoSorter.parseSortString("a,,b");
+		expect(result).toEqual({ a: 0, " ": 1, b: 2 });
+	});
+
+	it("trims whitespace from elements", () => {
+		const result = TodoSorter.parseSortString(" a , b , c ");
+		expect(result).toEqual({ a: 0, b: 1, c: 2 });
+	});
+
+	it("returns empty object for empty string", () => {
+		const result = TodoSorter.parseSortString("");
+		expect(result).toEqual({});
+	});
 });

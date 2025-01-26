@@ -2,15 +2,23 @@ import { TODO_ITEM_REGEX } from "src/consts";
 import { TodoItem } from "./item";
 import { TodoList } from "./list";
 
-export class TodoData {
+export type Config = {
+	order: { [statusChar: string]: number };
+	useAlphabeticalSortForTies: boolean;
+};
+
+export class TodoSorter {
 	todoLists: TodoList[];
 
-	constructor() {
+	config: Config;
+
+	constructor(config: Config) {
 		this.todoLists = [];
+		this.config = config;
 	}
 
-	sortLists(sortOrder: { [statusChar: string]: number }): TodoList[] {
-		this.todoLists.forEach((list) => list.sort(sortOrder));
+	sortLists(): TodoList[] {
+		this.todoLists.forEach((list) => list.sort(this.config));
 		return this.todoLists;
 	}
 
@@ -25,6 +33,18 @@ export class TodoData {
 				this.todoLists.push(list);
 			}
 		});
+	}
+
+	static parseSortString(sortString: string): Record<string, number> {
+		if (!sortString) return {};
+		sortString.replace(/,+$/, ""); // remove trailing commas
+
+		const split = sortString.split(",").map((s) => s.trim());
+
+		return split.reduce<Record<string, number>>((acc, curr, idx) => {
+			acc[curr === "" ? " " : curr] = idx;
+			return acc;
+		}, {});
 	}
 
 	private parseTodoListSections(

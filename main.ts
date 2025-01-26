@@ -6,14 +6,16 @@ import {
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
-import { TodoData } from "src/todo-sort";
+import { TodoSorter } from "src/todo-sort";
 
 interface TodoSortSettings {
 	sortOrder: string;
+	useAlphabeticalSortForTies: boolean;
 }
 
 export const DEFAULT_SETTINGS: TodoSortSettings = {
 	sortOrder: "*,!,?,/,,x,-",
+	useAlphabeticalSortForTies: true,
 };
 
 export default class TodoSortPlugin extends Plugin {
@@ -27,10 +29,15 @@ export default class TodoSortPlugin extends Plugin {
 			id: "todo-sort-sort-todos",
 			name: "Sort in the current note",
 			editorCallback: (editor: Editor, _view: MarkdownView) => {
-				const todoData = new TodoData();
-				todoData.parseNote(editor.getValue());
+				const sorter = new TodoSorter({
+					order: this.parsedSortOrder,
+					useAlphabeticalSortForTies:
+						this.settings.useAlphabeticalSortForTies,
+				});
 
-				const sorted = todoData.sortLists(this.parsedSortOrder);
+				sorter.parseNote(editor.getValue());
+
+				const sorted = sorter.sortLists();
 				sorted.forEach((list) => {
 					editor.replaceRange(...list.toReplacement());
 				});
@@ -48,24 +55,13 @@ export default class TodoSortPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData(),
 		);
-		this.parseSortOrder();
+		this.parsedSortOrder = TodoSorter.parseSortString(
+			this.settings.sortOrder,
+		);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-
-	private parseSortOrder() {
-		const { sortOrder } = this.settings;
-		const split = sortOrder.split(",").map((s) => s.trim());
-
-		this.parsedSortOrder = split.reduce<Record<string, number>>(
-			(acc, curr, idx) => {
-				acc[curr === "" ? " " : curr] = idx;
-				return acc;
-			},
-			{},
-		);
 	}
 }
 
@@ -93,6 +89,20 @@ class TodoSortSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.sortOrder)
 					.onChange(async (value) => {
 						this.plugin.settings.sortOrder = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Sorting order")
+			.setDesc(
+				`Item status characters separated by commas. Defines sorting order for todo items in the list. Example: ${DEFAULT_SETTINGS.sortOrder}`,
+			)
+			.addToggle((v) =>
+				v
+					.setValue(this.plugin.settings.useAlphabeticalSortForTies)
+					.onChange(async (v) => {
+						this.plugin.settings.useAlphabeticalSortForTies = v;
 						await this.plugin.saveSettings();
 					}),
 			);
