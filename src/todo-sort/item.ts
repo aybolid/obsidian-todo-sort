@@ -1,21 +1,12 @@
-import { TodoStatus } from "./types";
-
 export class TodoItem {
 	text: string;
-	status: TodoStatus | null;
 	statusChar: string;
 	children: TodoItem[];
 	depth: number;
 	nestedContent: string[];
 
-	constructor(
-		text: string,
-		status: TodoStatus | null,
-		statusChar: string,
-		depth = 0,
-	) {
+	constructor(text: string, statusChar: string, depth = 0) {
 		this.text = text.trim();
-		this.status = status;
 		this.statusChar = statusChar;
 		this.children = [];
 		this.depth = depth;

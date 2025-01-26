@@ -1,9 +1,0 @@
-export enum TodoStatus {
-	UNCHECKED,
-	DONE,
-	IMPORTANT,
-	CANCELLED,
-	IN_PROGRESS,
-	QUESTION,
-	STAR,
-}

@@ -1,4 +1,4 @@
-import { STATUS_MAP, TODO_ITEM_REGEX } from "src/consts";
+import { TODO_ITEM_REGEX } from "src/consts";
 import { TodoItem } from "./item";
 import { TodoList } from "./list";
 
@@ -9,8 +9,8 @@ export class TodoData {
 		this.todoLists = [];
 	}
 
-	sortLists(): TodoList[] {
-		this.todoLists.forEach((list) => list.sort());
+	sortLists(sortOrder: { [statusChar: string]: number }): TodoList[] {
+		this.todoLists.forEach((list) => list.sort(sortOrder));
 		return this.todoLists;
 	}
 
@@ -116,11 +116,6 @@ export class TodoData {
 		const [, indent, , statusChar, text] = match;
 		const depth = indent.length;
 
-		return new TodoItem(
-			text,
-			STATUS_MAP[statusChar.toLowerCase()] ?? null,
-			statusChar,
-			depth,
-		);
+		return new TodoItem(text, statusChar, depth);
 	}
 }

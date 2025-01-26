@@ -9,15 +9,16 @@ import {
 import { TodoData } from "src/todo-sort";
 
 interface TodoSortSettings {
-	mySetting: string;
+	sortOrder: string;
 }
 
-const DEFAULT_SETTINGS: TodoSortSettings = {
-	mySetting: "default",
+export const DEFAULT_SETTINGS: TodoSortSettings = {
+	sortOrder: "*,!,?,/,,x,-",
 };
 
 export default class TodoSortPlugin extends Plugin {
 	settings: TodoSortSettings;
+	parsedSortOrder: { [statusChar: string]: number };
 
 	async onload() {
 		await this.loadSettings();
@@ -29,7 +30,7 @@ export default class TodoSortPlugin extends Plugin {
 				const todoData = new TodoData();
 				todoData.parseNote(editor.getValue());
 
-				const sorted = todoData.sortLists();
+				const sorted = todoData.sortLists(this.parsedSortOrder);
 				sorted.forEach((list) => {
 					editor.replaceRange(...list.toReplacement());
 				});
@@ -47,10 +48,24 @@ export default class TodoSortPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData(),
 		);
+		this.parseSortOrder();
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	private parseSortOrder() {
+		const { sortOrder } = this.settings;
+		const split = sortOrder.split(",").map((s) => s.trim());
+
+		this.parsedSortOrder = split.reduce<Record<string, number>>(
+			(acc, curr, idx) => {
+				acc[curr === "" ? " " : curr] = idx;
+				return acc;
+			},
+			{},
+		);
 	}
 }
 
@@ -68,14 +83,16 @@ class TodoSortSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Setting #1")
-			.setDesc("It's a secret")
+			.setName("Sorting order")
+			.setDesc(
+				`Item status characters separated by commas. Defines sorting order for todo items in the list. Example: ${DEFAULT_SETTINGS.sortOrder}`,
+			)
 			.addText((text) =>
 				text
-					.setPlaceholder("Enter your secret")
-					.setValue(this.plugin.settings.mySetting)
+					.setPlaceholder("Enter sort order")
+					.setValue(this.plugin.settings.sortOrder)
 					.onChange(async (value) => {
-						this.plugin.settings.mySetting = value;
+						this.plugin.settings.sortOrder = value;
 						await this.plugin.saveSettings();
 					}),
 			);

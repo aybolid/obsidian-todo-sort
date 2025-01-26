@@ -7,7 +7,15 @@ type Replacement = [string, EditorPosition, EditorPosition];
 const getReplacement = (markdown: string): Replacement[] => {
 	const data = new TodoData();
 	data.parseNote(markdown);
-	const sorted = data.sortLists();
+	const sorted = data.sortLists({
+		"*": 0,
+		"!": 1,
+		"?": 2,
+		"/": 3,
+		" ": 4,
+		x: 5,
+		"-": 6,
+	});
 	return sorted.map((s) => s.toReplacement());
 };
 

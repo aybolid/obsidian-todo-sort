@@ -1,5 +1,4 @@
 import { EditorPosition } from "obsidian";
-import { STATUS_ORDER_MAP } from "src/consts";
 import { TodoItem } from "./item";
 
 export class TodoList {
@@ -11,8 +10,8 @@ export class TodoList {
 		this.items = [];
 	}
 
-	sort(): TodoItem[] {
-		this.sortTodoItems(this.items);
+	sort(sortOrder: { [statusChar: string]: number }): TodoItem[] {
+		this.sortTodoItems(this.items, sortOrder);
 		return this.items;
 	}
 
@@ -30,17 +29,16 @@ export class TodoList {
 		];
 	}
 
-	private sortTodoItems(items: TodoItem[]): void {
+	private sortTodoItems(
+		items: TodoItem[],
+		sortOrder: { [statusChar: string]: number },
+	): void {
 		if (items.length > 1) {
 			items.sort((a, b) => {
 				const aOrder =
-					a.status !== null
-						? STATUS_ORDER_MAP[a.status]
-						: Number.MAX_SAFE_INTEGER;
+					sortOrder[a.statusChar] ?? Number.MAX_SAFE_INTEGER;
 				const bOrder =
-					b.status !== null
-						? STATUS_ORDER_MAP[b.status]
-						: Number.MAX_SAFE_INTEGER;
+					sortOrder[b.statusChar] ?? Number.MAX_SAFE_INTEGER;
 
 				if (aOrder !== bOrder) {
 					return aOrder - bOrder;
@@ -50,6 +48,6 @@ export class TodoList {
 			});
 		}
 
-		items.forEach((item) => this.sortTodoItems(item.children));
+		items.forEach((item) => this.sortTodoItems(item.children, sortOrder));
 	}
 }
