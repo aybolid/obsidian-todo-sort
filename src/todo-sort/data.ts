@@ -36,14 +36,29 @@ export class TodoData {
 
 		let currentSection: { startLine: number; markdown: string } | null =
 			null;
+		let prevParsedLineIndent = Number.MIN_SAFE_INTEGER;
+
 		lines.forEach((line, idx) => {
+			const lineIndent = (line.match(/^\s*/)?.[0] ?? "").length;
+
 			if (line.match(TODO_ITEM_REGEX) == null) {
-				if (currentSection !== null) {
+				const isNestedContent = lineIndent === prevParsedLineIndent + 1;
+
+				if (currentSection !== null && !isNestedContent) {
 					sections.push(currentSection);
+					prevParsedLineIndent = Number.MIN_SAFE_INTEGER;
 					currentSection = null;
+					return;
 				}
+
+				if (currentSection !== null) {
+					currentSection.markdown += line + "\n";
+				}
+
 				return;
 			}
+
+			prevParsedLineIndent = lineIndent;
 
 			if (currentSection === null) {
 				currentSection = { startLine: idx, markdown: "" };
@@ -59,13 +74,17 @@ export class TodoData {
 		markdown: string,
 		sectionStartLine: number,
 	): TodoList {
-		const lines = markdown.split("\n");
+		const lines = markdown.split("\n").filter(Boolean);
+
 		const list = new TodoList();
 		const stack: TodoItem[] = [];
 
 		lines.forEach((line, idx) => {
 			const parsed = this.parseLine(line);
-			if (parsed === null) return;
+			if (parsed === null) {
+				stack[stack.length - 1].nestedContent.push(line.trim());
+				return;
+			}
 
 			if (list.lineStart === -1) {
 				list.lineStart = sectionStartLine + idx;

@@ -156,3 +156,35 @@ test("separated lists sorting", () => {
 
 	expect(getReplacement(input)).toStrictEqual(expectedReplacements);
 });
+
+test("sorting with nested content", () => {
+	const input = [
+		"### Hello World\n",
+		"\n",
+		"- [ ] c\n",
+		"\tc nested text\n",
+		"\t- [ ] c1\n",
+		"\t\tc1 nested text\n",
+		"- [ ] z\n",
+		"- [ ] a\n",
+		"\ta nested text\n",
+	].join("");
+
+	const output = [
+		"- [ ] a\n",
+		"\ta nested text\n",
+		"- [ ] c\n",
+		"\tc nested text\n",
+		"\t- [ ] c1\n",
+		"\t\tc1 nested text\n",
+		"- [ ] z\n",
+	].join("");
+
+	const expectedReplacement: Replacement = [
+		output,
+		{ line: 2, ch: 0 },
+		{ line: 9, ch: 0 },
+	];
+
+	expect(getReplacement(input)).toStrictEqual([expectedReplacement]);
+});
