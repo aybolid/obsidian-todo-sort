@@ -1,4 +1,9 @@
-import { TODO_ITEM_REGEX } from "src/consts";
+import {
+	INDENT_REGEX,
+	SPACES_TO_TABS_REGEX,
+	TODO_ITEM_REGEX,
+	TRAILING_COMMA_REGEX,
+} from "src/consts";
 import { TodoItem } from "./item";
 import { TodoList } from "./list";
 
@@ -37,7 +42,7 @@ export class TodoSorter {
 
 	static parseSortString(sortString: string): Record<string, number> {
 		if (!sortString) return {};
-		sortString.replace(/,+$/, ""); // remove trailing commas
+		sortString.replace(TRAILING_COMMA_REGEX, "");
 
 		const split = sortString.split(",").map((s) => s.trim());
 
@@ -59,7 +64,9 @@ export class TodoSorter {
 		let prevParsedLineIndent = Number.MIN_SAFE_INTEGER;
 
 		lines.forEach((line, idx) => {
-			const lineIndent = (line.match(/^\s*/)?.[0] ?? "").length;
+			const lineIndent = this.replaceSpacesWithTabs(
+				line.match(INDENT_REGEX)?.[0] ?? "",
+			).length;
 
 			if (line.match(TODO_ITEM_REGEX) == null) {
 				const isNestedContent = lineIndent === prevParsedLineIndent + 1;
@@ -88,6 +95,16 @@ export class TodoSorter {
 		});
 
 		return sections;
+	}
+
+	private replaceSpacesWithTabs(s: string) {
+		return s.replace(SPACES_TO_TABS_REGEX, (match) => {
+			const existingTabs = match.match(/\t/g)?.length || 0;
+			const spaceCount = match.replace(/\t/g, "").length;
+			const newTabs = Math.floor(spaceCount / 4);
+
+			return "\t".repeat(existingTabs + newTabs);
+		});
 	}
 
 	private parseSingleList(
@@ -134,7 +151,7 @@ export class TodoSorter {
 		if (!match) return null;
 
 		const [, indent, , statusChar, text] = match;
-		const depth = indent.length;
+		const depth = this.replaceSpacesWithTabs(indent).length;
 
 		return new TodoItem(text, statusChar, depth);
 	}

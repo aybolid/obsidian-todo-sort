@@ -94,9 +94,9 @@ class TodoSortSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Sorting order")
+			.setName("Alphabetical sort")
 			.setDesc(
-				`Item status characters separated by commas. Defines sorting order for todo items in the list. Example: ${DEFAULT_SETTINGS.sortOrder}`,
+				`If enabled alphabetical sort will be applied for items with same status`,
 			)
 			.addToggle((v) =>
 				v

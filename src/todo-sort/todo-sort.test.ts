@@ -1,4 +1,10 @@
 import { EditorPosition } from "obsidian";
+import {
+	INDENT_REGEX,
+	SPACES_TO_TABS_REGEX,
+	TODO_ITEM_REGEX,
+	TRAILING_COMMA_REGEX,
+} from "src/consts";
 import { expect, test, describe, it } from "vitest";
 import { Config, TodoSorter } from "./sorter";
 
@@ -215,6 +221,44 @@ test("separated lists sorting", () => {
 	];
 
 	expect(getReplacement(input)).toStrictEqual(expectedReplacements);
+});
+
+test("works with spaces and tabs", () => {
+	const input = [
+		"### Hello World\n",
+		"\n",
+		"- [ ] a\n",
+		"\t- [x] a1\n",
+		"    - [!] a2\n",
+		"- [x] b\n",
+		"- [!] c\n",
+		"\t- [-] c1\n",
+		"\t- [/] c2\n",
+		"\t    - [/] c21\n",
+		"    \t- [-] c22\n",
+		"        - [ ] c23\n",
+	].join("");
+
+	const output = [
+		"- [!] c\n",
+		"\t- [/] c2\n",
+		"\t\t- [/] c21\n",
+		"\t\t- [ ] c23\n",
+		"\t\t- [-] c22\n",
+		"\t- [-] c1\n",
+		"- [ ] a\n",
+		"\t- [!] a2\n",
+		"\t- [x] a1\n",
+		"- [x] b\n",
+	].join("");
+
+	const expectedReplacement: Replacement = [
+		output,
+		{ line: 2, ch: 0 },
+		{ line: 12, ch: 0 },
+	];
+
+	expect(getReplacement(input)).toStrictEqual([expectedReplacement]);
 });
 
 test("sorting with nested content", () => {
