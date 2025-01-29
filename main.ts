@@ -8,18 +8,18 @@ import {
 } from "obsidian";
 import { TodoSorter } from "src/todo-sort";
 
-interface TodoSortSettings {
+interface TodoSorterSettings {
 	sortOrder: string;
 	useAlphabeticalSortForTies: boolean;
 }
 
-export const DEFAULT_SETTINGS: TodoSortSettings = {
+export const DEFAULT_SETTINGS: TodoSorterSettings = {
 	sortOrder: "*,!,?,/,,x,-",
 	useAlphabeticalSortForTies: true,
 };
 
-export default class TodoSortPlugin extends Plugin {
-	settings: TodoSortSettings;
+export default class TodoSorterPlugin extends Plugin {
+	settings: TodoSorterSettings;
 	parsedSortOrder: { [statusChar: string]: number };
 
 	async onload() {
@@ -53,10 +53,10 @@ export default class TodoSortPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData(),
+			await this.loadData()
 		);
 		this.parsedSortOrder = TodoSorter.parseSortString(
-			this.settings.sortOrder,
+			this.settings.sortOrder
 		);
 	}
 
@@ -66,9 +66,9 @@ export default class TodoSortPlugin extends Plugin {
 }
 
 class TodoSortSettingTab extends PluginSettingTab {
-	plugin: TodoSortPlugin;
+	plugin: TodoSorterPlugin;
 
-	constructor(app: App, plugin: TodoSortPlugin) {
+	constructor(app: App, plugin: TodoSorterPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -81,7 +81,7 @@ class TodoSortSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Sorting order")
 			.setDesc(
-				`Item status characters separated by commas. Defines sorting order for todo items in the list. Example: ${DEFAULT_SETTINGS.sortOrder}`,
+				`Item status characters separated by commas. Defines sorting order for todo items in the list. Example: ${DEFAULT_SETTINGS.sortOrder}`
 			)
 			.addText((text) =>
 				text
@@ -90,13 +90,13 @@ class TodoSortSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.sortOrder = value;
 						await this.plugin.saveSettings();
-					}),
+					})
 			);
 
 		new Setting(containerEl)
 			.setName("Alphabetical sort")
 			.setDesc(
-				`If enabled alphabetical sort will be applied for items with same status`,
+				`If enabled, alphabetical sorting will be applied to items with the same status`
 			)
 			.addToggle((v) =>
 				v
@@ -104,7 +104,7 @@ class TodoSortSettingTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.useAlphabeticalSortForTies = v;
 						await this.plugin.saveSettings();
-					}),
+					})
 			);
 	}
 }

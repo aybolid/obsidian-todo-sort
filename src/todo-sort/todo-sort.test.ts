@@ -1,10 +1,4 @@
 import { EditorPosition } from "obsidian";
-import {
-	INDENT_REGEX,
-	SPACES_TO_TABS_REGEX,
-	TODO_ITEM_REGEX,
-	TRAILING_COMMA_REGEX,
-} from "src/consts";
 import { expect, test, describe, it } from "vitest";
 import { Config, TodoSorter } from "./sorter";
 
@@ -14,13 +8,13 @@ type Replacement = [string, EditorPosition, EditorPosition];
 
 const getReplacement = (
 	markdown: string,
-	configOverride?: Config,
+	configOverride?: Config
 ): Replacement[] => {
 	const sorter = new TodoSorter(
 		configOverride ?? {
 			order: TodoSorter.parseSortString(DEFAULT_SORT_ORDER),
 			useAlphabeticalSortForTies: true,
-		},
+		}
 	);
 	sorter.parseNote(markdown);
 	const sorted = sorter.sortLists();
@@ -68,7 +62,7 @@ test("custom order sorting", () => {
 		getReplacement(input, {
 			order: TodoSorter.parseSortString("-,,!"),
 			useAlphabeticalSortForTies: true,
-		}),
+		})
 	).toStrictEqual([expectedReplacement]);
 });
 
@@ -93,7 +87,7 @@ test("sorting without alphabetical sort for ties", () => {
 		getReplacement(input, {
 			order: TodoSorter.parseSortString("!,,-"),
 			useAlphabeticalSortForTies: false,
-		}),
+		})
 	).toStrictEqual([expectedReplacement]);
 });
 

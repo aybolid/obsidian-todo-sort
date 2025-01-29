@@ -1,10 +1,10 @@
 {
 	"id": "todo-sort-plugin",
-	"name": "Todo Sort",
+	"name": "Todo Sorter",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
+	"description": "Organizes your todo lists by sorting tasks based on their status. It follows a customizable sorting order and can optionally sort tasks alphabetically when priorities are tied",
+	"author": "Matviy Ivanov",
 	"authorUrl": "https://obsidian.md",
 	"fundingUrl": "https://obsidian.md/pricing",
 	"isDesktopOnly": false
